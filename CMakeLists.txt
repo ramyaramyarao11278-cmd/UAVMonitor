@@ -16,6 +16,9 @@ add_executable(UAVMonitor
     src/DeviationView.cpp
     src/TrackView.cpp
     src/GDIWidget.cpp
+    src/Protocol.cpp
+    src/FrameTransmitter.cpp
+    src/InfoBar.cpp
 )
 
 target_include_directories(UAVMonitor PRIVATE src)

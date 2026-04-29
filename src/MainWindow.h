@@ -2,14 +2,18 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMainWindow>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QTableWidget>
 #include <QTimer>
 #include <chrono>
 
 #include "DeviationView.h"
+#include "FrameTransmitter.h"
 #include "GDIWidget.h"
+#include "InfoBar.h"
 #include "ProfileView.h"
 #include "Simulator.h"
 #include "TimeSeriesView.h"
@@ -27,6 +31,12 @@ private slots:
     void onTick();
     void onStartStop();
     void onReset();
+
+    // 协议帧相关
+    void onTransmitStartStop();
+    void onSelectFile();
+    void onFrameReady(uav::TelemetryFrame tm, uav::ProtoRunwayInfo rw, qint64 timestampMs);
+    void onTransmitError(QString msg);
 
 private:
     void setupUI();
@@ -54,6 +64,19 @@ private:
 
     bool running_ = false;
     std::chrono::steady_clock::time_point lastTick_;
+
+    // ---- 新增：协议帧相关控件 ----
+    InfoBar*          infoBar_           = nullptr;
+    FrameTransmitter* transmitter_      = nullptr;
+    QComboBox*        modeCombo_        = nullptr;
+    QSpinBox*         intervalSpin_     = nullptr;
+    QLineEdit*        runwayNameEdit_   = nullptr;
+    QDoubleSpinBox*   rwLonSpin_        = nullptr;
+    QDoubleSpinBox*   rwLatSpin_        = nullptr;
+    QPushButton*      fileBtn_          = nullptr;
+    QPushButton*      transmitBtn_      = nullptr;
+    QLabel*           filePathLabel_    = nullptr;
+    QString           selectedFilePath_;
 };
 
 } // namespace uav

@@ -1,5 +1,6 @@
 #pragma once
 #include "UAVData.h"
+#include "TelemetryFrame.h"
 #include <random>
 #include <vector>
 
@@ -21,6 +22,9 @@ public:
     ParamPanel getParams() const;
     Phase phase() const { return phase_; }
     double elapsed() const { return elapsed_; }
+
+    /// 根据当前仿真状态生成一帧完整遥测数据
+    TelemetryFrame generateFrame();
 
 private:
     void updateTakeoff(double dt);
