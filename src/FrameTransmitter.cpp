@@ -35,10 +35,19 @@ void FrameTransmitter::start()
         }
         readBuf_.clear();
     } else {
-        // 模式 A: 检查 Simulator
+        // 模式 A: 检查 Simulator，并持久化打开输出文件
         if (!sim_) {
             emit errorOccurred(QStringLiteral("Simulator not set"));
             return;
+        }
+        if (!outputPath_.isEmpty()) {
+            outputFile_ = new QFile(outputPath_, this);
+            if (!outputFile_->open(QIODevice::Append | QIODevice::WriteOnly)) {
+                emit errorOccurred(QStringLiteral("Cannot open output file: %1").arg(outputPath_));
+                delete outputFile_;
+                outputFile_ = nullptr;
+                return;
+            }
         }
     }
 
@@ -55,6 +64,11 @@ void FrameTransmitter::stop()
         timer_->deleteLater();
         timer_ = nullptr;
     }
+    if (outputFile_) {
+        outputFile_->close();
+        outputFile_->deleteLater();
+        outputFile_ = nullptr;
+    }
     if (inputFile_) {
         inputFile_->close();
         inputFile_->deleteLater();
@@ -66,27 +80,19 @@ void FrameTransmitter::stop()
 void FrameTransmitter::onTick()
 {
     if (mode_ == SimulateThenFile) {
-        // ---- 模式 A: 仿真 → 打包 → 写文件 → 发信号 ----
+        // ---- 模式 A: 仅 generateFrame → 打包 → 写文件 → 发信号 ----
+        // 注意：不调用 sim_->update()，Simulator 由 MainWindow 的主 timer 驱动
         if (!sim_) return;
-
-        // 让仿真器前进一步
-        double dt = intervalMs_ / 1000.0;
-        sim_->update(dt);
 
         TelemetryFrame frame = sim_->generateFrame();
         qint64 ts = QDateTime::currentMSecsSinceEpoch();
 
         QByteArray packed = packFrame(frame, runway_, ts);
 
-        // 追加写入输出文件
-        if (!outputPath_.isEmpty()) {
-            QFile outFile(outputPath_);
-            if (outFile.open(QIODevice::Append)) {
-                outFile.write(packed);
-                outFile.close();
-            } else {
-                emit errorOccurred(QStringLiteral("Cannot write to output file: %1").arg(outputPath_));
-            }
+        // 写入已持久化打开的输出文件
+        if (outputFile_ && outputFile_->isOpen()) {
+            outputFile_->write(packed);
+            outputFile_->flush();
         }
 
         emit frameReady(frame, runway_, ts);
@@ -105,60 +111,61 @@ void FrameTransmitter::onTick()
             readBuf_.append(chunk);
         }
 
-        // 尝试在缓冲区中查找帧头同步
-        while (readBuf_.size() >= TOTAL_FRAME_SIZE) {
-            // 查找帧头 0xEB 0x90 0xEB 0x90
-            int headerIdx = -1;
-            for (int i = 0; i <= readBuf_.size() - 4; ++i) {
-                if (static_cast<quint8>(readBuf_[i])   == 0xEB &&
-                    static_cast<quint8>(readBuf_[i+1]) == 0x90 &&
-                    static_cast<quint8>(readBuf_[i+2]) == 0xEB &&
-                    static_cast<quint8>(readBuf_[i+3]) == 0x90) {
-                    headerIdx = i;
-                    break;
-                }
-            }
-
-            if (headerIdx < 0) {
-                // 没找到帧头，保留最后 3 字节（可能是不完整帧头）
-                readBuf_ = readBuf_.right(3);
+        // 第一步：帧头同步（独立于是否够一帧）
+        int headerIdx = -1;
+        for (int i = 0; i <= readBuf_.size() - 4; ++i) {
+            if (static_cast<quint8>(readBuf_[i])   == 0xEB &&
+                static_cast<quint8>(readBuf_[i+1]) == 0x90 &&
+                static_cast<quint8>(readBuf_[i+2]) == 0xEB &&
+                static_cast<quint8>(readBuf_[i+3]) == 0x90) {
+                headerIdx = i;
                 break;
             }
+        }
 
-            // 跳过帧头之前的垃圾数据
-            if (headerIdx > 0) {
-                readBuf_.remove(0, headerIdx);
+        if (headerIdx < 0) {
+            // 没找到帧头，保留最后 3 字节（可能是不完整帧头）
+            if (readBuf_.size() > 3)
+                readBuf_ = readBuf_.right(3);
+            // 文件已读完且找不到帧头
+            if (chunk.isEmpty()) {
+                emit finished();
+                stop();
             }
-
-            // 检查是否有完整帧
-            if (readBuf_.size() < TOTAL_FRAME_SIZE) {
-                break; // 等更多数据
-            }
-
-            // 提取一帧
-            QByteArray oneFrame = readBuf_.left(TOTAL_FRAME_SIZE);
-            readBuf_.remove(0, TOTAL_FRAME_SIZE);
-
-            TelemetryFrame tm{};
-            ProtoRunwayInfo rw;
-            qint64 ts = 0;
-            QString err;
-
-            if (unpackFrame(oneFrame, tm, rw, ts, &err)) {
-                emit frameReady(tm, rw, ts);
-            } else {
-                emit errorOccurred(QStringLiteral("Unpack error: %1").arg(err));
-            }
-
-            // 每个 tick 只处理一帧，模拟实时回放
             return;
         }
 
-        // 缓冲区数据不够且文件读完
-        if (chunk.isEmpty() && readBuf_.size() < TOTAL_FRAME_SIZE) {
-            emit finished();
-            stop();
+        // 跳过帧头之前的垃圾数据
+        if (headerIdx > 0) {
+            readBuf_.remove(0, headerIdx);
         }
+
+        // 第二步：检查是否有完整帧
+        if (readBuf_.size() < TOTAL_FRAME_SIZE) {
+            // 不够一帧，等下个 tick 继续读
+            if (chunk.isEmpty()) {
+                emit finished();
+                stop();
+            }
+            return;
+        }
+
+        // 提取一帧
+        QByteArray oneFrame = readBuf_.left(TOTAL_FRAME_SIZE);
+        readBuf_.remove(0, TOTAL_FRAME_SIZE);
+
+        TelemetryFrame tm{};
+        ProtoRunwayInfo rw;
+        qint64 ts = 0;
+        QString err;
+
+        if (unpackFrame(oneFrame, tm, rw, ts, &err)) {
+            emit frameReady(tm, rw, ts);
+        } else {
+            emit errorOccurred(QStringLiteral("Unpack error: %1").arg(err));
+        }
+
+        // 每个 tick 只处理一帧，模拟实时回放
     }
 }
 

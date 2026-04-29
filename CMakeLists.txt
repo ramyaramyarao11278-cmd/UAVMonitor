@@ -24,8 +24,9 @@ add_executable(UAVMonitor
 target_include_directories(UAVMonitor PRIVATE src)
 target_compile_definitions(UAVMonitor PRIVATE NOMINMAX)
 
-# 坑3: MSVC下用.lib后缀更保险
+# MSVC: 用 /utf-8 支持源码中的中文字符串字面量
 if(MSVC)
+    target_compile_options(UAVMonitor PRIVATE /utf-8)
     target_link_libraries(UAVMonitor
         Qt6::Widgets
         "gdiplus.lib"

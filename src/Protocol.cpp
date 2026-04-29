@@ -31,16 +31,14 @@ static void writeLE(QByteArray& buf, quint32 v) { v = qToLittleEndian(v); buf.ap
 static void writeLE(QByteArray& buf, qint32  v) { v = qToLittleEndian(v); buf.append(reinterpret_cast<const char*>(&v), 4); }
 static void writeLE(QByteArray& buf, quint64 v) { v = qToLittleEndian(v); buf.append(reinterpret_cast<const char*>(&v), 8); }
 
-// ---- 小端读取辅助 ----
-static int readPos = 0; // 线程不安全，仅在单次 unpack 内使用
-
-static quint8  readU8 (const char* d) { quint8  v = static_cast<quint8>(d[readPos]); readPos += 1; return v; }
-static qint8   readI8 (const char* d) { qint8   v = static_cast<qint8>(d[readPos]);  readPos += 1; return v; }
-static quint16 readU16(const char* d) { quint16 v; memcpy(&v, d + readPos, 2); v = qFromLittleEndian(v); readPos += 2; return v; }
-static qint16  readI16(const char* d) { qint16  v; memcpy(&v, d + readPos, 2); v = qFromLittleEndian(v); readPos += 2; return v; }
-static quint32 readU32(const char* d) { quint32 v; memcpy(&v, d + readPos, 4); v = qFromLittleEndian(v); readPos += 4; return v; }
-static qint32  readI32(const char* d) { qint32  v; memcpy(&v, d + readPos, 4); v = qFromLittleEndian(v); readPos += 4; return v; }
-static quint64 readU64(const char* d) { quint64 v; memcpy(&v, d + readPos, 8); v = qFromLittleEndian(v); readPos += 8; return v; }
+// ---- 小端读取辅助（使用局部游标 pos，线程安全） ----
+static quint8  readU8 (const char* d, int& pos) { quint8  v = static_cast<quint8>(d[pos]); pos += 1; return v; }
+static qint8   readI8 (const char* d, int& pos) { qint8   v = static_cast<qint8>(d[pos]);  pos += 1; return v; }
+static quint16 readU16(const char* d, int& pos) { quint16 v; memcpy(&v, d + pos, 2); v = qFromLittleEndian(v); pos += 2; return v; }
+static qint16  readI16(const char* d, int& pos) { qint16  v; memcpy(&v, d + pos, 2); v = qFromLittleEndian(v); pos += 2; return v; }
+static quint32 readU32(const char* d, int& pos) { quint32 v; memcpy(&v, d + pos, 4); v = qFromLittleEndian(v); pos += 4; return v; }
+static qint32  readI32(const char* d, int& pos) { qint32  v; memcpy(&v, d + pos, 4); v = qFromLittleEndian(v); pos += 4; return v; }
+static quint64 readU64(const char* d, int& pos) { quint64 v; memcpy(&v, d + pos, 8); v = qFromLittleEndian(v); pos += 8; return v; }
 
 // ================================================================
 //  packFrame — 按协议格式打包一帧
@@ -109,16 +107,16 @@ bool unpackFrame(const QByteArray& frame,
     }
 
     const char* d = frame.constData();
-    readPos = 0;
+    int pos = 0; // 局部游标，线程安全
 
     // ---- 帧头校验 ----
-    quint8 h0 = readU8(d), h1 = readU8(d), h2 = readU8(d), h3 = readU8(d);
+    quint8 h0 = readU8(d, pos), h1 = readU8(d, pos), h2 = readU8(d, pos), h3 = readU8(d, pos);
     if (h0 != 0xEB || h1 != 0x90 || h2 != 0xEB || h3 != 0x90) {
         return fail(QStringLiteral("Invalid frame header"));
     }
 
     // ---- 帧长 ----
-    quint16 payloadLen = readU16(d);
+    quint16 payloadLen = readU16(d, pos);
     int expectedPayload = FIXED_META_SIZE + static_cast<int>(sizeof(TelemetryFrame)) + MD5_SIZE;
     if (payloadLen != expectedPayload) {
         return fail(QStringLiteral("Payload length mismatch: %1 != %2")
@@ -140,26 +138,23 @@ bool unpackFrame(const QByteArray& frame,
     }
 
     // ---- 时间戳 ----
-    timestampMs = static_cast<qint64>(readU64(d));
+    timestampMs = static_cast<qint64>(readU64(d, pos));
 
-    // ---- 跑道名称 ----
-    rw.name = QString::fromLatin1(d + readPos, 16).trimmed();
-    // 去掉末尾的 \0
-    rw.name = rw.name.left(rw.name.indexOf(QChar('\0')));
-    if (rw.name.isEmpty()) {
-        rw.name = QString::fromLatin1(d + readPos, 16);
-        rw.name.remove(QChar('\0'));
-    }
-    readPos += 16;
+    // ---- 跑道名称（简化解码：截断到第一个 NUL） ----
+    QByteArray rawName(d + pos, 16);
+    int nullIdx = rawName.indexOf('\0');
+    if (nullIdx >= 0) rawName.truncate(nullIdx);
+    rw.name = QString::fromLatin1(rawName);
+    pos += 16;
 
     // ---- 跑道经纬度 ----
-    qint32 rwLon = readI32(d);
-    qint32 rwLat = readI32(d);
+    qint32 rwLon = readI32(d, pos);
+    qint32 rwLat = readI32(d, pos);
     rw.lonDeg = rwLon / 1e7;
     rw.latDeg = rwLat / 1e7;
 
     // ---- 遥测数据体 ----
-    memcpy(&tm, d + readPos, sizeof(TelemetryFrame));
+    memcpy(&tm, d + pos, sizeof(TelemetryFrame));
 
     return true;
 }

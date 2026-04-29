@@ -15,14 +15,14 @@ namespace uav {
 
 static const char* phaseStr(Phase p) {
     switch (p) {
-        case Phase::Stopped:  return "\xE5\x81\x9C\xE6\xAD\xA2";
-        case Phase::Takeoff:  return "\xE8\xB5\xB7\xE9\xA3\x9E\xE6\xBB\x91\xE8\xB7\x91";
-        case Phase::Climb:    return "\xE7\x88\xAC\xE5\x8D\x87";
-        case Phase::Cruise:   return "\xE5\xB7\xA1\xE8\x88\xAA";
-        case Phase::Approach: return "\xE8\xBF\x9B\xE8\xBF\x91";
-        case Phase::Landing:  return "\xE7\x9D\x80\xE9\x99\x86\xE5\x87\x8F\xE9\x80\x9F";
+        case Phase::Stopped:  return "停止";
+        case Phase::Takeoff:  return "起飞滑跑";
+        case Phase::Climb:    return "爬升";
+        case Phase::Cruise:   return "巡航";
+        case Phase::Approach: return "进近";
+        case Phase::Landing:  return "着陆减速";
     }
-    return "\xE6\x9C\xAA\xE7\x9F\xA5";
+    return "未知";
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -36,14 +36,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(transmitter_, &FrameTransmitter::frameReady, this, &MainWindow::onFrameReady);
     connect(transmitter_, &FrameTransmitter::errorOccurred, this, &MainWindow::onTransmitError);
     connect(transmitter_, &FrameTransmitter::finished, this, [this](){
-        transmitBtn_->setText(QStringLiteral("\xE5\xBC\x80\xE5\xA7\x8B\xE4\xBC\xA0\xE8\xBE\x93"));
+        transmitBtn_->setText(QStringLiteral("开始传输"));
     });
 }
 
 MainWindow::~MainWindow() { timeEndPeriod(1); }
 
 void MainWindow::setupUI() {
-    setWindowTitle(QString::fromUtf8("\xE5\x9B\xBA\xE5\xAE\x9A\xE7\xBF\xBC\xE6\x97\xA0\xE4\xBA\xBA\xE6\x9C\xBA\xE8\xB5\xB7\xE9\x99\x8D\xE7\x9B\x91\xE6\x8E\xA7\xE7\xB3\xBB\xE7\xBB\x9F"));
+    setWindowTitle(QStringLiteral("固定翼无人机起降监控系统"));
     resize(1560, 1000);
     setMinimumSize(1240, 800);
 
@@ -101,19 +101,17 @@ void MainWindow::setupUI() {
     rightSplit->addWidget(trackWidget_);
 
     // ---- 右侧参数面板 ----
-    QGroupBox* infoGroup = new QGroupBox(
-        QString::fromUtf8("\xE9\xA3\x9E\xE8\xA1\x8C\xE5\x8F\x82\xE6\x95\xB0\xE4\xB8\x8E\xE4\xBB\xBF\xE7\x9C\x9F\xE6\x8E\xA7\xE5\x88\xB6"));
+    QGroupBox* infoGroup = new QGroupBox(QStringLiteral("飞行参数与仿真控制"));
     QVBoxLayout* infoLayout = new QVBoxLayout(infoGroup);
     infoLayout->setSpacing(10);
 
-    QLabel* paramTitle = new QLabel(QString::fromUtf8("\xE5\xAE\x9E\xE6\x97\xB6\xE5\x8F\x82\xE6\x95\xB0"));
+    QLabel* paramTitle = new QLabel(QStringLiteral("实时参数"));
     paramTitle->setObjectName("sectionLabel");
     infoLayout->addWidget(paramTitle);
 
     paramTable_ = new QTableWidget(8, 2);
     paramTable_->setHorizontalHeaderLabels({
-        QString::fromUtf8("\xE5\x8F\x82\xE6\x95\xB0\xE9\xA1\xB9"),
-        QString::fromUtf8("\xE6\x95\xB0\xE5\x80\xBC")
+        QStringLiteral("参数项"), QStringLiteral("数值")
     });
     paramTable_->horizontalHeader()->setStretchLastSection(true);
     paramTable_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
@@ -124,14 +122,14 @@ void MainWindow::setupUI() {
     paramTable_->setShowGrid(true);
 
     QStringList names = {
-        QString::fromUtf8("\xE9\xA3\x8E\xE9\x80\x9F"),
-        QString::fromUtf8("\xE6\xB8\xA9\xE5\xBA\xA6"),
-        QString::fromUtf8("\xE7\x9B\xB8\xE5\xAF\xB9\xE9\xAB\x98\xE5\xBA\xA6"),
-        QString::fromUtf8("\xE6\xB0\xB4\xE5\xB9\xB3\xE9\xA3\x9E\xE8\xA1\x8C\xE9\x80\x9F\xE5\xBA\xA6"),
-        QString::fromUtf8("\xE5\x9E\x82\xE7\x9B\xB4\xE5\x8D\x87\xE9\x99\x8D\xE9\x80\x9F\xE5\xBA\xA6"),
-        QString::fromUtf8("\xE7\x94\xB5\xE6\xB1\xA0\xE5\x8D\x95\xE4\xBD\x93\xE7\x94\xB5\xE5\x8E\x8B"),
-        QString::fromUtf8("\xE9\x81\xA5\xE6\x8E\xA7\xE4\xBF\xA1\xE5\x8F\xB7\xE5\xBC\xBA\xE5\xBA\xA6"),
-        QString::fromUtf8("\xE7\x9B\xB8\xE5\xAF\xB9\xE8\xBF\x94\xE8\x88\xAA\xE7\x82\xB9\xE8\xB7\x9D\xE7\xA6\xBB")
+        QStringLiteral("风速"),
+        QStringLiteral("温度"),
+        QStringLiteral("相对高度"),
+        QStringLiteral("水平飞行速度"),
+        QStringLiteral("垂直升降速度"),
+        QStringLiteral("电池单体电压"),
+        QStringLiteral("遥控信号强度"),
+        QStringLiteral("相对返航点距离")
     };
     for (int i = 0; i < 8; ++i) {
         paramTable_->setItem(i, 0, new QTableWidgetItem(names[i]));
@@ -147,19 +145,19 @@ void MainWindow::setupUI() {
     infoLayout->addWidget(separator);
 
     // 仿真控制
-    QLabel* ctrlTitle = new QLabel(QString::fromUtf8("\xE4\xBB\xBF\xE7\x9C\x9F\xE6\x8E\xA7\xE5\x88\xB6"));
+    QLabel* ctrlTitle = new QLabel(QStringLiteral("仿真控制"));
     ctrlTitle->setObjectName("sectionLabel");
     infoLayout->addWidget(ctrlTitle);
 
     QHBoxLayout* infoRow = new QHBoxLayout();
-    phaseLabel_ = new QLabel(QString::fromUtf8("\xE9\x98\xB6\xE6\xAE\xB5: \xE5\x81\x9C\xE6\xAD\xA2"));
-    timeLabel_ = new QLabel(QString::fromUtf8("\xE6\x97\xB6\xE9\x97\xB4: 0.0s"));
+    phaseLabel_ = new QLabel(QStringLiteral("阶段: 停止"));
+    timeLabel_ = new QLabel(QStringLiteral("时间: 0.0s"));
     infoRow->addWidget(phaseLabel_);
     infoRow->addWidget(timeLabel_);
     infoLayout->addLayout(infoRow);
 
     QHBoxLayout* windRow = new QHBoxLayout();
-    windRow->addWidget(new QLabel(QString::fromUtf8("\xE9\xA3\x8E\xE9\x80\x9F(km/h):")));
+    windRow->addWidget(new QLabel(QStringLiteral("风速(km/h):")));
     windSpin_ = new QDoubleSpinBox();
     windSpin_->setRange(0, 50);
     windSpin_->setValue(10);
@@ -170,13 +168,13 @@ void MainWindow::setupUI() {
     infoLayout->addLayout(windRow);
 
     QHBoxLayout* phaseRow = new QHBoxLayout();
-    phaseRow->addWidget(new QLabel(QString::fromUtf8("\xE5\x88\x87\xE6\x8D\xA2\xE9\x98\xB6\xE6\xAE\xB5:")));
+    phaseRow->addWidget(new QLabel(QStringLiteral("切换阶段:")));
     phaseCombo_ = new QComboBox();
-    phaseCombo_->addItem(QString::fromUtf8("\xE8\xB5\xB7\xE9\xA3\x9E"), (int)Phase::Takeoff);
-    phaseCombo_->addItem(QString::fromUtf8("\xE7\x88\xAC\xE5\x8D\x87"), (int)Phase::Climb);
-    phaseCombo_->addItem(QString::fromUtf8("\xE5\xB7\xA1\xE8\x88\xAA"), (int)Phase::Cruise);
-    phaseCombo_->addItem(QString::fromUtf8("\xE8\xBF\x9B\xE8\xBF\x91"), (int)Phase::Approach);
-    phaseCombo_->addItem(QString::fromUtf8("\xE7\x9D\x80\xE9\x99\x86"), (int)Phase::Landing);
+    phaseCombo_->addItem(QStringLiteral("起飞"), (int)Phase::Takeoff);
+    phaseCombo_->addItem(QStringLiteral("爬升"), (int)Phase::Climb);
+    phaseCombo_->addItem(QStringLiteral("巡航"), (int)Phase::Cruise);
+    phaseCombo_->addItem(QStringLiteral("进近"), (int)Phase::Approach);
+    phaseCombo_->addItem(QStringLiteral("着陆"), (int)Phase::Landing);
     connect(phaseCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
             [this](int idx) {
                 Phase p = static_cast<Phase>(phaseCombo_->itemData(idx).toInt());
@@ -186,10 +184,10 @@ void MainWindow::setupUI() {
     infoLayout->addLayout(phaseRow);
 
     QHBoxLayout* btnRow = new QHBoxLayout();
-    startStopBtn_ = new QPushButton(QString::fromUtf8("\xE5\xBC\x80\xE5\xA7\x8B\xE4\xBB\xBF\xE7\x9C\x9F"));
+    startStopBtn_ = new QPushButton(QStringLiteral("开始仿真"));
     connect(startStopBtn_, &QPushButton::clicked, this, &MainWindow::onStartStop);
     btnRow->addWidget(startStopBtn_);
-    resetBtn_ = new QPushButton(QString::fromUtf8("\xE9\x87\x8D\xE7\xBD\xAE"));
+    resetBtn_ = new QPushButton(QStringLiteral("重置"));
     connect(resetBtn_, &QPushButton::clicked, this, &MainWindow::onReset);
     btnRow->addWidget(resetBtn_);
     infoLayout->addLayout(btnRow);
@@ -202,24 +200,24 @@ void MainWindow::setupUI() {
     rootLayout->addWidget(bodyWidget, 1);
 
     // ---- 底部控制栏：协议帧传输 ----
-    QGroupBox* txGroup = new QGroupBox(QStringLiteral("\xE5\x8D\x8F\xE8\xAE\xAE\xE5\xB8\xA7\xE4\xBC\xA0\xE8\xBE\x93\xE6\x8E\xA7\xE5\x88\xB6"));
+    QGroupBox* txGroup = new QGroupBox(QStringLiteral("协议帧传输控制"));
     QHBoxLayout* txLayout = new QHBoxLayout(txGroup);
     txLayout->setSpacing(8);
 
-    txLayout->addWidget(new QLabel(QStringLiteral("\xE6\xA8\xA1\xE5\xBC\x8F:")));
+    txLayout->addWidget(new QLabel(QStringLiteral("模式:")));
     modeCombo_ = new QComboBox();
-    modeCombo_->addItem(QStringLiteral("\xE5\x86\x85\xE9\x83\xA8\xE4\xBB\xBF\xE7\x9C\x9F\xE2\x86\x92\xE6\x96\x87\xE4\xBB\xB6"));
-    modeCombo_->addItem(QStringLiteral("\xE8\xAF\xBB\xE5\x8F\x96\xE5\xA4\x96\xE9\x83\xA8\xE6\x96\x87\xE4\xBB\xB6"));
+    modeCombo_->addItem(QStringLiteral("内部仿真→文件"));
+    modeCombo_->addItem(QStringLiteral("读取外部文件"));
     txLayout->addWidget(modeCombo_);
 
-    txLayout->addWidget(new QLabel(QStringLiteral("\xE9\x97\xB4\xE9\x9A\x94(ms):")));
+    txLayout->addWidget(new QLabel(QStringLiteral("间隔(ms):")));
     intervalSpin_ = new QSpinBox();
     intervalSpin_->setRange(20, 2000);
     intervalSpin_->setValue(200);
     intervalSpin_->setSingleStep(10);
     txLayout->addWidget(intervalSpin_);
 
-    txLayout->addWidget(new QLabel(QStringLiteral("\xE8\xB7\x91\xE9\x81\x93:")));
+    txLayout->addWidget(new QLabel(QStringLiteral("跑道:")));
     runwayNameEdit_ = new QLineEdit(QStringLiteral("RW01"));
     runwayNameEdit_->setMaximumWidth(80);
     txLayout->addWidget(runwayNameEdit_);
@@ -238,7 +236,7 @@ void MainWindow::setupUI() {
     rwLatSpin_->setValue(40.0725000);
     txLayout->addWidget(rwLatSpin_);
 
-    fileBtn_ = new QPushButton(QStringLiteral("\xE9\x80\x89\xE6\x8B\xA9\xE6\x96\x87\xE4\xBB\xB6"));
+    fileBtn_ = new QPushButton(QStringLiteral("选择文件"));
     connect(fileBtn_, &QPushButton::clicked, this, &MainWindow::onSelectFile);
     txLayout->addWidget(fileBtn_);
 
@@ -246,7 +244,7 @@ void MainWindow::setupUI() {
     filePathLabel_->setMaximumWidth(200);
     txLayout->addWidget(filePathLabel_);
 
-    transmitBtn_ = new QPushButton(QStringLiteral("\xE5\xBC\x80\xE5\xA7\x8B\xE4\xBC\xA0\xE8\xBE\x93"));
+    transmitBtn_ = new QPushButton(QStringLiteral("开始传输"));
     connect(transmitBtn_, &QPushButton::clicked, this, &MainWindow::onTransmitStartStop);
     txLayout->addWidget(transmitBtn_);
 
@@ -297,7 +295,13 @@ void MainWindow::onStartStop() {
     if (running_) {
         timer_->stop();
         running_ = false;
-        startStopBtn_->setText(QString::fromUtf8("\xE7\xBB\xA7\xE7\xBB\xAD\xE4\xBB\xBF\xE7\x9C\x9F"));
+        // 暂停主 timer 时，如果模式 A 传输在跑，自动停止传输
+        if (transmitter_->isRunning() &&
+            transmitter_->mode() == FrameTransmitter::SimulateThenFile) {
+            transmitter_->stop();
+            transmitBtn_->setText(QStringLiteral("开始传输"));
+        }
+        startStopBtn_->setText(QStringLiteral("继续仿真"));
         return;
     }
     if (sim_.phase() == Phase::Stopped && sim_.elapsed() == 0) {
@@ -306,16 +310,20 @@ void MainWindow::onStartStop() {
     lastTick_ = std::chrono::steady_clock::now();
     timer_->start(33);
     running_ = true;
-    startStopBtn_->setText(QString::fromUtf8("\xE6\x9A\x82\xE5\x81\x9C"));
+    startStopBtn_->setText(QStringLiteral("暂停"));
 }
 
 void MainWindow::onReset() {
     timer_->stop();
     running_ = false;
+    if (transmitter_->isRunning()) {
+        transmitter_->stop();
+        transmitBtn_->setText(QStringLiteral("开始传输"));
+    }
     sim_.reset();
-    startStopBtn_->setText(QString::fromUtf8("\xE5\xBC\x80\xE5\xA7\x8B\xE4\xBB\xBF\xE7\x9C\x9F"));
-    phaseLabel_->setText(QString::fromUtf8("\xE9\x98\xB6\xE6\xAE\xB5: \xE5\x81\x9C\xE6\xAD\xA2"));
-    timeLabel_->setText(QString::fromUtf8("\xE6\x97\xB6\xE9\x97\xB4: 0.0s"));
+    startStopBtn_->setText(QStringLiteral("开始仿真"));
+    phaseLabel_->setText(QStringLiteral("阶段: 停止"));
+    timeLabel_->setText(QStringLiteral("时间: 0.0s"));
     updateParamTable();
     profileWidget_->requestRepaint();
     timeSeriesWidget_->requestRepaint();
@@ -337,14 +345,14 @@ void MainWindow::onTick() {
     updateParamTable();
 
     phaseLabel_->setText(
-        QString::fromUtf8("\xE9\x98\xB6\xE6\xAE\xB5: %1").arg(QString::fromUtf8(phaseStr(sim_.phase()))));
+        QStringLiteral("阶段: %1").arg(QString::fromUtf8(phaseStr(sim_.phase()))));
     timeLabel_->setText(
-        QString::fromUtf8("\xE6\x97\xB6\xE9\x97\xB4: %1s").arg(sim_.elapsed(), 0, 'f', 1));
+        QStringLiteral("时间: %1s").arg(sim_.elapsed(), 0, 'f', 1));
 
     if (sim_.phase() == Phase::Stopped && running_) {
         timer_->stop();
         running_ = false;
-        startStopBtn_->setText(QString::fromUtf8("\xE4\xBB\xBF\xE7\x9C\x9F\xE5\xAE\x8C\xE6\x88\x90"));
+        startStopBtn_->setText(QStringLiteral("仿真完成"));
     }
 }
 
@@ -353,21 +361,21 @@ void MainWindow::updateParamTable() {
     auto set = [this](int row, const QString& val) {
         paramTable_->item(row, 1)->setText(val);
     };
-    set(0, QString("%1 km/h").arg(p.windSpeed, 0, 'f', 1));
-    set(1, QString::fromUtf8("%1 \xC2\xB0" "C").arg(p.temperature, 0, 'f', 1));
-    set(2, QString("%1 m").arg(p.altitude, 0, 'f', 1));
-    set(3, QString("%1 km/h").arg(p.hSpeed, 0, 'f', 1));
-    set(4, QString("%1 m/s").arg(p.vSpeed, 0, 'f', 1));
-    set(5, QString("%1 V").arg(p.batteryVolt, 0, 'f', 2));
-    set(6, QString("%1 %").arg(p.signalStrength, 0, 'f', 0));
-    set(7, QString("%1 m").arg(p.distToReturn, 0, 'f', 0));
+    set(0, QStringLiteral("%1 km/h").arg(p.windSpeed, 0, 'f', 1));
+    set(1, QStringLiteral("%1 °C").arg(p.temperature, 0, 'f', 1));
+    set(2, QStringLiteral("%1 m").arg(p.altitude, 0, 'f', 1));
+    set(3, QStringLiteral("%1 km/h").arg(p.hSpeed, 0, 'f', 1));
+    set(4, QStringLiteral("%1 m/s").arg(p.vSpeed, 0, 'f', 1));
+    set(5, QStringLiteral("%1 V").arg(p.batteryVolt, 0, 'f', 2));
+    set(6, QStringLiteral("%1 %").arg(p.signalStrength, 0, 'f', 0));
+    set(7, QStringLiteral("%1 m").arg(p.distToReturn, 0, 'f', 0));
 }
 
 // ---- 协议帧传输控制 ----
 void MainWindow::onTransmitStartStop() {
     if (transmitter_->isRunning()) {
         transmitter_->stop();
-        transmitBtn_->setText(QStringLiteral("\xE5\xBC\x80\xE5\xA7\x8B\xE4\xBC\xA0\xE8\xBE\x93"));
+        transmitBtn_->setText(QStringLiteral("开始传输"));
         return;
     }
 
@@ -388,18 +396,22 @@ void MainWindow::onTransmitStartStop() {
         if (sim_.phase() == Phase::Stopped && sim_.elapsed() == 0) {
             sim_.setPhase(Phase::Takeoff);
         }
+        // 确保主仿真 timer 在跑（Simulator 只由主 timer 推进）
+        if (!running_) {
+            onStartStop();
+        }
     } else {
         transmitter_->setMode(FrameTransmitter::ReadExternalFile);
         if (selectedFilePath_.isEmpty()) {
-            QMessageBox::warning(this, QStringLiteral("Error"),
-                QStringLiteral("\xE8\xAF\xB7\xE5\x85\x88\xE9\x80\x89\xE6\x8B\xA9\xE8\xBE\x93\xE5\x85\xA5\xE6\x96\x87\xE4\xBB\xB6"));
+            QMessageBox::warning(this, QStringLiteral("错误"),
+                QStringLiteral("请先选择输入文件"));
             return;
         }
         transmitter_->setInputFile(selectedFilePath_);
     }
 
     transmitter_->start();
-    transmitBtn_->setText(QStringLiteral("\xE5\x81\x9C\xE6\xAD\xA2\xE4\xBC\xA0\xE8\xBE\x93"));
+    transmitBtn_->setText(QStringLiteral("停止传输"));
 }
 
 void MainWindow::onSelectFile() {
@@ -407,11 +419,11 @@ void MainWindow::onSelectFile() {
     QString path;
     if (modeIdx == 0) {
         path = QFileDialog::getSaveFileName(this,
-            QStringLiteral("\xE9\x80\x89\xE6\x8B\xA9\xE8\xBE\x93\xE5\x87\xBA\xE6\x96\x87\xE4\xBB\xB6"),
+            QStringLiteral("选择输出文件"),
             QString(), QStringLiteral("Binary (*.bin);;All (*)"));
     } else {
         path = QFileDialog::getOpenFileName(this,
-            QStringLiteral("\xE9\x80\x89\xE6\x8B\xA9\xE8\xBE\x93\xE5\x85\xA5\xE6\x96\x87\xE4\xBB\xB6"),
+            QStringLiteral("选择输入文件"),
             QString(), QStringLiteral("Binary (*.bin);;All (*)"));
     }
     if (!path.isEmpty()) {
@@ -430,7 +442,7 @@ void MainWindow::onFrameReady(TelemetryFrame tm, ProtoRunwayInfo rw, qint64 time
 }
 
 void MainWindow::onTransmitError(QString msg) {
-    QMessageBox::warning(this, QStringLiteral("Transmit Error"), msg);
+    QMessageBox::warning(this, QStringLiteral("传输错误"), msg);
 }
 
 } // namespace uav

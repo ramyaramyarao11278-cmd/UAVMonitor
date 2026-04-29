@@ -1,9 +1,10 @@
 #pragma once
+// 总长度 135 字节，由各字段累加得出（#pragma pack(1) 紧凑打包）
 #include <cstdint>
 
 namespace uav {
 
-// 遥测数据帧 —— 按协议"遥测字段表"顺序紧凑打包
+// 遥测数据帧 ── 按协议"遥测字段表"顺序紧凑打包
 // 物理值 = 存储值 × 分辨率 + offset
 #pragma pack(push, 1)
 struct TelemetryFrame {

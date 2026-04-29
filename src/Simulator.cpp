@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cmath>
+#include <limits>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -41,6 +42,11 @@ void Simulator::update(double dt) {
 
     // 沿跑道推进
     cur_.x += (cur_.speed / 3.6) * dt;
+
+    // 非巡航/进近阶段：roll 缓慢回 0
+    if (phase_ != Phase::Cruise && phase_ != Phase::Approach) {
+        cur_.roll *= 0.95;
+    }
 
     // 记录历史
     history_.push_back(cur_);
@@ -89,6 +95,9 @@ void Simulator::updateCruise(double dt) {
     cur_.verticalSpd *= 0.9;
     cur_.altitude += cur_.verticalSpd * dt;
 
+    // 巡航阶段 roll 模拟阵风晃动 ±5°
+    cur_.roll = 5.0 * std::sin(elapsed_ * 0.3);
+
     if (cur_.x > 3000) {
         phase_ = Phase::Approach;
     }
@@ -105,6 +114,9 @@ void Simulator::updateApproach(double dt) {
     cur_.verticalSpd = -descentRate;
     cur_.altitude += cur_.verticalSpd * dt;
     cur_.altitude = std::max(0.0, cur_.altitude);
+
+    // 进近阶段 roll 模拟修正 ±3°
+    cur_.roll = 3.0 * std::sin(elapsed_ * 0.5);
 
     if (cur_.altitude < 5.0) {
         phase_ = Phase::Landing;
@@ -147,10 +159,15 @@ ParamPanel Simulator::getParams() const {
     return p;
 }
 
-// 编码辅助：物理值 → 存储值
+// 编码辅助：物理值 → 存储值（带 clamp 保护，防止溢出）
 template<typename T>
 static T enc(double phys, double res, double offset = 0.0) {
-    return static_cast<T>(std::round((phys - offset) / res));
+    double v = std::round((phys - offset) / res);
+    constexpr double maxV = static_cast<double>(std::numeric_limits<T>::max());
+    constexpr double minV = static_cast<double>(std::numeric_limits<T>::min());
+    if (v > maxV) v = maxV;
+    if (v < minV) v = minV;
+    return static_cast<T>(v);
 }
 
 TelemetryFrame Simulator::generateFrame()
@@ -200,6 +217,8 @@ TelemetryFrame Simulator::generateFrame()
     // --- 加速度 ---
     f.accNorth = enc<int16_t>(0.3 * std::sin(t * 0.8) + noise01(rng_), 0.005);
     f.accEast  = enc<int16_t>(0.2 * std::cos(t * 0.6) + noise01(rng_), 0.005);
+    // TODO: 协议示例文档中此字段类型 int8 + 分辨率 0.005 似有错
+    //       （量程超出 int8 范围），暂用 clamp 保护，待与老师确认是否应改为 int16
     f.accUp    = enc<int8_t>(cur_.verticalSpd * 0.1, 0.005);
 
     // --- 舵面 ---

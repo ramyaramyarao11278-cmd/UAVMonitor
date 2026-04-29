@@ -21,6 +21,7 @@ public:
     ~FrameTransmitter();
 
     void setMode(Mode m)              { mode_ = m; }
+    Mode mode() const                 { return mode_; }
     void setIntervalMs(int ms)        { intervalMs_ = ms; }
     void setOutputFile(const QString& path) { outputPath_ = path; }
     void setInputFile(const QString& path)  { inputPath_ = path; }
@@ -53,7 +54,10 @@ private:
     QTimer*     timer_ = nullptr;
     Simulator*  sim_   = nullptr;
 
-    // 模式 B 用
+    // 模式 A 用：持久化输出文件
+    QFile*   outputFile_ = nullptr;
+
+    // 模式 B 用：持久化输入文件
     QFile*   inputFile_ = nullptr;
     QByteArray readBuf_;
 };
