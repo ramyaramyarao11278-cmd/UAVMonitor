@@ -217,9 +217,7 @@ TelemetryFrame Simulator::generateFrame()
     // --- 加速度 ---
     f.accNorth = enc<int16_t>(0.3 * std::sin(t * 0.8) + noise01(rng_), 0.005);
     f.accEast  = enc<int16_t>(0.2 * std::cos(t * 0.6) + noise01(rng_), 0.005);
-    // TODO: 协议示例文档中此字段类型 int8 + 分辨率 0.005 似有错
-    //       （量程超出 int8 范围），暂用 clamp 保护，待与老师确认是否应改为 int16
-    f.accUp    = enc<int8_t>(cur_.verticalSpd * 0.1, 0.005);
+    f.accUp    = enc<int16_t>(cur_.verticalSpd * 0.1, 0.005);
 
     // --- 舵面 ---
     f.elevatorL  = enc<int16_t>(-cur_.attackAngle * 0.3 + noise01(rng_), 0.005);

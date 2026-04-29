@@ -1,5 +1,5 @@
 #pragma once
-// 总长度 135 字节，由各字段累加得出（#pragma pack(1) 紧凑打包）
+// 总长度 136 字节，由各字段累加得出（#pragma pack(1) 紧凑打包）
 #include <cstdint>
 
 namespace uav {
@@ -43,7 +43,7 @@ struct TelemetryFrame {
     // --- 加速度 ---
     int16_t  accNorth;           // 北向加速度  0.005 m/s²
     int16_t  accEast;            // 东向加速度  0.005 m/s²
-    int8_t   accUp;              // 天向加速度  0.005 m/s²
+    int16_t  accUp;              // 天向加速度  0.005 m/s²
 
     // --- 舵面 ---
     int16_t  elevatorL;          // 左升降舵  0.005°
@@ -122,8 +122,8 @@ struct TelemetryFrame {
 };
 #pragma pack(pop)
 
-// 编译期校验 TelemetryFrame 紧凑大小 = 135 字节
-static_assert(sizeof(TelemetryFrame) == 135,
+// 编译期校验 TelemetryFrame 紧凑大小 = 136 字节
+static_assert(sizeof(TelemetryFrame) == 136,
               "TelemetryFrame size mismatch -- check field types and packing");
 
 } // namespace uav

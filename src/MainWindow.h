@@ -77,6 +77,7 @@ private:
     QPushButton*      transmitBtn_      = nullptr;
     QLabel*           filePathLabel_    = nullptr;
     QString           selectedFilePath_;
+    ProtoRunwayInfo   protoRunway_;     // 协议跑道信息，同步到 InfoBar
 };
 
 } // namespace uav

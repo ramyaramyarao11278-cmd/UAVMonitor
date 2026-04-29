@@ -386,6 +386,9 @@ void MainWindow::onTransmitStartStop() {
     transmitter_->setRunway(rw);
     transmitter_->setIntervalMs(intervalSpin_->value());
 
+    // 同步协议跑道信息到成员，供 InfoBar 等使用
+    protoRunway_ = rw;
+
     int modeIdx = modeCombo_->currentIndex();
     if (modeIdx == 0) {
         transmitter_->setMode(FrameTransmitter::SimulateThenFile);
@@ -433,6 +436,8 @@ void MainWindow::onSelectFile() {
 }
 
 void MainWindow::onFrameReady(TelemetryFrame tm, ProtoRunwayInfo rw, qint64 timestampMs) {
+    // 同步协议跑道信息（模式 B 回放时更新）
+    protoRunway_ = rw;
     infoBar_->updateInfo(rw, timestampMs);
     // 刷新视图
     profileWidget_->requestRepaint();

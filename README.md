@@ -26,10 +26,10 @@
 | 14 | 16B | 跑道名称 | ASCII，不足补 `0x00` |
 | 30 | 4B | 跑道经度 | Int32，单位 1e-7 度 |
 | 34 | 4B | 跑道纬度 | Int32，单位 1e-7 度 |
-| 38 | 135B | 遥测数据体 | 紧凑打包的 `TelemetryFrame` 结构体 |
-| 173 | 16B | MD5 校验 | 对偏移 0~172 的全部字节求 MD5 |
+| 38 | 136B | 遥测数据体 | 紧凑打包的 `TelemetryFrame` 结构体 |
+| 174 | 16B | MD5 校验 | 对偏移 0~173 的全部字节求 MD5 |
 
-**总帧长：189 字节**
+**总帧长：190 字节**
 
 ## 编译步骤
 
@@ -72,7 +72,7 @@ UAVMonitor/
     ├── main.cpp             # 入口 + debug 自测
     ├── MainWindow.h/cpp     # 主窗口（仿真控制 + 传输控制）
     ├── Simulator.h/cpp      # 飞行仿真器
-    ├── TelemetryFrame.h     # 遥测帧 POD 结构体（135 字节）
+    ├── TelemetryFrame.h     # 遥测帧 POD 结构体（136 字节）
     ├── Protocol.h/cpp       # 协议帧打包/解包 + MD5
     ├── FrameTransmitter.h/cpp # 双模式帧发送器
     ├── InfoBar.h/cpp        # 顶部跑道/时间信息条
